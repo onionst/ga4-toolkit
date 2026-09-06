@@ -313,12 +313,24 @@ def flatten_report(payload: dict[str, Any]) -> dict[str, Any]:
         values = [item.get("value", "") for item in row.get("dimensionValues", [])]
         values.extend(item.get("value", "") for item in row.get("metricValues", []))
         rows.append(dict(zip(columns, values)))
+    row_count = int(payload.get("rowCount", len(rows)))
+    truncated = row_count > len(rows)
+    warnings = []
+    if truncated:
+        warnings.append(
+            f"Report truncated: returned {len(rows)} of {row_count} rows. "
+            "Increase the limit (up to 10000) or narrow the report; "
+            "automatic pagination is not supported."
+        )
     return {
         "property_id": payload.get("propertyId"),
         "date_range": payload.get("requestedDateRange"),
         "columns": columns,
         "rows": rows,
-        "row_count": payload.get("rowCount", len(rows)),
+        "row_count": row_count,
+        "returned_row_count": len(rows),
+        "truncated": truncated,
+        "warnings": warnings,
         "metadata": payload.get("metadata", {}),
         "property_quota": payload.get("propertyQuota", {}),
     }

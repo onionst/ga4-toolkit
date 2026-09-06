@@ -91,6 +91,29 @@ class ClientTests(unittest.TestCase):
                 metrics=["activeUsers;drop"],
             )
 
+    def test_explicit_property_overrides_environment_and_saved_default(self):
+        with patch.dict(os.environ, {"GA4_PROPERTY_ID": "222"}):
+            with patch("ga4_toolkit.client.read_config", return_value={"default_property_id": "333"}):
+                self.assertEqual(resolve_property_id("properties/111"), "111")
+                self.assertEqual(resolve_property_id(), "222")
+
+    def test_truncated_report_retains_total_and_returned_counts(self):
+        report = flatten_report({
+            "rowCount": 500,
+            "rows": [{"dimensionValues": [], "metricValues": []}],
+        })
+        self.assertEqual(report["row_count"], 500)
+        self.assertEqual(report["returned_row_count"], 1)
+        self.assertTrue(report["truncated"])
+        self.assertIn("1 of 500", report["warnings"][0])
+
+    def test_complete_and_empty_reports_do_not_warn(self):
+        for payload in ({}, {"rowCount": 0}, {"rowCount": 1, "rows": [{}]}):
+            with self.subTest(payload=payload):
+                report = flatten_report(payload)
+                self.assertFalse(report["truncated"])
+                self.assertEqual(report["warnings"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

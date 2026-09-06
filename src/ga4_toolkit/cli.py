@@ -14,7 +14,10 @@ from .client import (
     AnalyticsError,
     config_path,
     default_service_account_path,
+    flatten_report,
+    normalize_property_id,
     read_config,
+    resolve_property_id,
     save_default_property,
 )
 from .formatting import render_metadata, render_report, render_rows
@@ -156,6 +159,12 @@ def run_auth(launch_browser: bool, client_id_file: str | None) -> int:
     return subprocess.run(command, check=False).returncode
 
 
+def print_report(payload: dict[str, Any], output_format: str) -> None:
+    for warning in flatten_report(payload)["warnings"]:
+        print(f"ga4: warning: {warning}", file=sys.stderr)
+    print(render_report(payload, output_format))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -186,6 +195,15 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
             return 0
+        if args.property is None:
+            args.property = resolve_property_id()
+            print(
+                f"ga4: using configured property {args.property}; "
+                "pass --property to select it explicitly.",
+                file=sys.stderr,
+            )
+        else:
+            args.property = normalize_property_id(args.property)
         if args.command == "overview":
             payload = overview(
                 client,
@@ -193,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
                 start_date=args.start,
                 end_date=args.end,
             )
-            print(render_report(payload, args.format))
+            print_report(payload, args.format)
             return 0
         if args.command in {"pages", "acquisition", "events"}:
             preset = {"pages": pages, "acquisition": acquisition, "events": events}[
@@ -206,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
                 end_date=args.end,
                 limit=args.limit,
             )
-            print(render_report(payload, args.format))
+            print_report(payload, args.format)
             return 0
         if args.command == "realtime":
             payload = client.run_realtime_report(
@@ -217,7 +235,7 @@ def main(argv: list[str] | None = None) -> int:
                 order_by_metric=args.order_by,
                 descending=not args.ascending,
             )
-            print(render_report(payload, args.format))
+            print_report(payload, args.format)
             return 0
         if args.command == "report":
             payload = client.run_report(
@@ -232,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
                 order_by_metric=args.order_by,
                 descending=not args.ascending,
             )
-            print(render_report(payload, args.format))
+            print_report(payload, args.format)
             return 0
         if args.command == "metadata":
             payload = client.get_metadata(

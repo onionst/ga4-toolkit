@@ -1,23 +1,47 @@
 # GA4 Toolkit
 
+[![CI](https://github.com/onionst/ga4-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/onionst/ga4-toolkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A Python CLI and MCP server for read-only Google Analytics 4 reports. It provides
 daily summaries, top pages, acquisition, events, realtime activity, metadata, and
 custom reports through the Google Analytics Data and Admin APIs.
+
+## Why use it?
+
+Use the same reporting client in shell scripts and MCP conversations. Common
+reports have ready-made commands, and results export as tables, JSON, or CSV.
+
+This is an independent community project. Google maintains an
+[official Analytics MCP server](https://github.com/googleanalytics/google-analytics-mcp).
+This toolkit focuses on a small CLI and reusable report presets alongside MCP.
+It is an early release; see the limits below before using it for bulk exports.
 
 ## Install
 
 Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```sh
-git clone git@github.com:onionst/ga4-codex-toolkit.git
-cd ga4-codex-toolkit
+git clone https://github.com/onionst/ga4-toolkit.git
+cd ga4-toolkit
 uv tool install .
 ga4 --version
 ```
 
-The repository is private; cloning requires GitHub access. Installation provides
-the `ga4` and `ga4-mcp` commands. To update an existing installation after pulling
-changes, run `uv tool install --force .`.
+Installation provides the `ga4` and `ga4-mcp` commands. To update an existing installation after pulling
+changes, run `uv tool install --force .`. There is no PyPI release; install from
+this repository. If upgrading from the earlier private package, uninstall that
+package first with `uv tool uninstall ga4-codex-toolkit`, then install this one.
+
+Try the output format without a Google account:
+
+```sh
+uv sync --locked
+uv run --locked python examples/offline_report.py
+```
+
+The example uses synthetic data and shows a report with two returned rows out of
+three, including its truncation warning.
 
 ## Authentication
 
@@ -78,7 +102,9 @@ default to `28daysAgo` through `yesterday`. Custom reports also accept
 
 An explicit property takes precedence over `GA4_PROPERTY_ID`, followed by an
 optional default saved with `ga4 use PROPERTY_ID`. The default lives in
-`~/.config/ga4-cli/config.json` and can be inspected with `ga4 config`.
+`~/.config/ga4-cli/config.json` and can be inspected with `ga4 config`. When
+`--property` is omitted, the CLI prints the selected property on stderr before
+querying it. An explicitly empty or invalid ID is rejected.
 
 ## MCP
 
@@ -108,9 +134,34 @@ The server exposes eight tools:
 | `ga4_realtime` | Realtime activity |
 | `ga4_metadata` | Available dimensions and metrics |
 
-Pass `property_id` explicitly to every report and metadata call. Use property
-discovery when the target is unknown. MCP and CLI share the same authentication
-and local configuration.
+`property_id` is required for every report and metadata call. Omitted, null, and
+empty values are rejected; MCP reports do not fall back to environment variables
+or saved defaults. Use property discovery when the target is unknown.
+
+Example arguments for `ga4_top_pages`:
+
+```json
+{
+  "property_id": "123456789",
+  "start_date": "7daysAgo",
+  "end_date": "yesterday",
+  "limit": 25
+}
+```
+
+MCP and CLI share authentication. The saved default property is a CLI convenience.
+
+## Report completeness
+
+JSON and MCP reports include the target `property_id`, total `row_count`,
+`returned_row_count`, a `truncated` flag, and a `warnings` list. If the API reports
+more rows than returned, the report is marked truncated. The CLI also writes the
+warning to stderr in every output format, leaving stdout suitable for pipelines.
+
+Increase `--limit` (or MCP `limit`) or narrow the report to retrieve more of the
+matching rows. The daily overview uses a fixed 366-row cap; shorten its date range
+or use a custom report when it is truncated. `truncated: false` only describes row
+limits; Google may still apply thresholds or sampling, reflected in `metadata`.
 
 ## Limits
 
@@ -133,3 +184,6 @@ uv build
 
 Tests use fake API responses and a local MCP handshake. They require no Google
 credentials and do not query Analytics.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and
+[CHANGELOG.md](CHANGELOG.md) for release notes. Licensed under [MIT](LICENSE).
