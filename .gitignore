@@ -1,0 +1,30 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+
+# Local configuration and authentication material
+.env
+.env.*
+!.env.example
+.config/
+config.json
+credentials*.json
+google-credentials*.json
+application_default_credentials.json
+client_secret*.json
+service-account*.json
+*service_account*.json
+secrets/
+*.pem
+*.key
+*.p12
+
+# Local report exports
+reports/

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ga4-codex-toolkit"
+version = "0.1.1"
+description = "Read-only Google Analytics 4 CLI and MCP server"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "google-auth>=2.40,<3",
+  "mcp>=1.28,<2",
+  "requests>=2.32,<3",
+]
+
+[project.urls]
+Repository = "https://github.com/onionst/ga4-codex-toolkit"
+
+[project.scripts]
+ga4 = "ga4_toolkit.cli:main"
+ga4-mcp = "ga4_toolkit.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ga4_toolkit"]
